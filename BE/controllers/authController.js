@@ -1,14 +1,32 @@
+const streamifier = require('streamifier');
 const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const cloudinary = require('../utils/cloudinary');
 
 exports.register = async (req, res) => {
   try {
-    const { name, address, email, password, course, profileImage } = req.body;
+    const { name, address, email, password, course } = req.body;
 
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: 'Email already registered' });
+
+    // Upload image to Cloudinary
+    let imageUrl = '';
+    if (req.file) {
+      imageUrl = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'eduhub_users' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result.secure_url); // return image URL
+          }
+        );
+        streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -18,14 +36,14 @@ exports.register = async (req, res) => {
       email,
       password: hashedPassword,
       course,
-      profileImage,
+      profileImage: imageUrl, // empty string if no file
     });
 
     await newUser.save();
 
     res.status(201).json({ message: 'User registered successfully' });
-
   } catch (err) {
+    console.error('REGISTER ERROR:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

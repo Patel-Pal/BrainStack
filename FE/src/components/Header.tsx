@@ -16,10 +16,9 @@ const Header = ({ onMenuClick }: HeaderProps) => {
         <FaBars />
       </button>
 
-      <div className="text-sm text-gray-500 hidden md:block">
-       
+      <div className="text-sm text-gray-500 hidden md:block">   
+        {/* breadcrump */}
       </div>
-
       <div className="flex items-center gap-4">
         <input
           type="text"

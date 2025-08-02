@@ -140,6 +140,7 @@ const Register = () => {
       accept="image/*"
       onChange={handleFileChange}
       className="hidden"
+      name="profileImage"
     />
   </div>
 </div>
