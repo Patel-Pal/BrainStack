@@ -3,6 +3,127 @@ const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cloudinary = require('../utils/cloudinary');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+// Configure Google OAuth Strategy
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    let user = await User.findOne({ googleId: profile.id });
+    if (!user) {
+      user = await User.findOne({ email: profile.emails[0].value });
+      if (!user) {
+        user = new User({
+          googleId: profile.id,
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          profileImage: profile.photos[0].value || '',
+          isActive: true
+        });
+        await user.save();
+      } else {
+        user.googleId = profile.id;
+        await user.save();
+      }
+    }
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
+}));
+
+exports.googleAuthCallback = async (req, res) => {
+  try {
+    const user = req.user;
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        name: user.name,
+        address: user.address,
+        email: user.email,
+        role: user.role,
+        course: user.course,
+        isActive: user.isActive,
+        profileImage: user.profileImage,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    // Check if profile is complete
+    const isProfileComplete = user.address && user.course;
+    const redirectUrl = isProfileComplete
+      ? `http://localhost:5173/?token=${token}`
+      : `http://localhost:5173/complete-profile?token=${token}`;
+
+    res.redirect(redirectUrl);
+  } catch (err) {
+    res.redirect('http://localhost:5173/login?error=auth_failed');
+  }
+};
+
+exports.completeProfile = async (req, res) => {
+  try {
+    const { address, course } = req.body;
+
+    const updatedData = {
+      address: address || undefined,
+      course: course || undefined,
+    };
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updatedData },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const newToken = jwt.sign(
+      {
+        userId: updatedUser._id,
+        name: updatedUser.name,
+        address: updatedUser.address,
+        email: updatedUser.email,
+        course: updatedUser.course,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        profileImage: updatedUser.profileImage,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(200).json({
+      message: 'Profile completed successfully',
+      token: newToken,
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        address: updatedUser.address,
+        email: updatedUser.email,
+        course: updatedUser.course,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        profileImage: updatedUser.profileImage,
+      },
+    });
+  } catch (err) {
+    console.error('COMPLETE PROFILE ERROR:', err);
+    res.status(500).json({ message: 'Server Error', error: err.message });
+  }
+};
+
+exports.googleAuth = passport.authenticate('google', {
+  scope: ['profile', 'email']
+});
+
 
 exports.register = async (req, res) => {
   try {
@@ -60,10 +181,20 @@ exports.login = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: 'Invalid credentials' });
 
+    // ✅ Store all needed fields in token payload
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      {
+        userId: user._id,
+        name: user.name,
+        address: user.address,
+        email: user.email,
+        role: user.role,
+        course: user.course,
+        isActive: user.isActive,
+        profileImage: user.profileImage,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '1d' }
     );
 
     res.status(200).json({
@@ -72,6 +203,7 @@ exports.login = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
+        address: user.address,
         email: user.email,
         role: user.role,
         course: user.course,
@@ -82,5 +214,83 @@ exports.login = async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, address, password, course } = req.body;
+
+    const updatedData = {
+      name: name || undefined,
+      address: address || undefined,
+      course: course || undefined,
+    };
+
+    // Hash new password if provided
+    if (password && password.trim() !== '') {
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Handle profile image upload to Cloudinary
+    if (req.file) {
+      const imageUrl = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'eduhub_users' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+      });
+      updatedData.profileImage = imageUrl;
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updatedData },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // ✅ Generate new token with updated user info
+    const newToken = jwt.sign(
+      {
+        userId: updatedUser._id,
+        name: updatedUser.name,
+        address: updatedUser.address,
+        email: updatedUser.email,
+        course: updatedUser.course,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        profileImage: updatedUser.profileImage,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      token: newToken,
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        address: updatedUser.address,
+        email: updatedUser.email,
+        course: updatedUser.course,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        profileImage: updatedUser.profileImage,
+      },
+    });
+  } catch (err) {
+    console.error('UPDATE ERROR:', err);
+    res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };

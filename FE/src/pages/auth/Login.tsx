@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axiosInstance from '../../api/axiosInstance';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 interface LoginForm {
@@ -10,7 +10,21 @@ interface LoginForm {
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState<LoginForm>({ email: '', password: '' });
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const token = query.get('token');
+    const error = query.get('error');
+    if (token) {
+      sessionStorage.setItem('token', token);
+      toast.success('Login successful');
+      navigate('/');
+    } else if (error) {
+      toast.error('Google authentication failed');
+    }
+  }, [location, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -26,6 +40,10 @@ const Login = () => {
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed');
     }
+  };  
+
+  const handleGoogleLogin = () => {
+    window.location.href = 'http://localhost:5000/api/auth/google';
   };
 
   return (
@@ -58,9 +76,11 @@ const Login = () => {
           </button>
         </form>
 
-         {/* Social Buttons Row */}
         <div className="mt-6 flex justify-between gap-4">
-          <button className="w-1/2 bg-gray-100 py-2 rounded-md hover:bg-gray-200 flex items-center justify-center gap-2">
+          <button
+            onClick={handleGoogleLogin}
+            className="w-1/2 bg-gray-100 py-2 rounded-md hover:bg-gray-200 flex items-center justify-center gap-2"
+          >
             <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" className="h-5 w-5" />
             <span className="text-sm font-medium">Google</span>
           </button>
@@ -70,7 +90,6 @@ const Login = () => {
           </button>
         </div>
 
-        {/* Link to register */}
         <p className="text-center text-sm mt-4">
           Don't have an account?{' '}
           <a href="/register" className="text-blue-600 hover:underline">

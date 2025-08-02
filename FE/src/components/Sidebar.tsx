@@ -40,7 +40,7 @@ const Sidebar = ({ closeSidebar }: SidebarProps) => {
         <FaTimes />
       </button>
 
-      <h1 className="text-2xl font-bold text-indigo-600 mb-8">EduHub</h1>
+      <h1 className="text-2xl font-bold text-indigo-600 mb-8">BrainStack</h1>
 
       <ul className="space-y-2">
         {navItems.map((item) => (
