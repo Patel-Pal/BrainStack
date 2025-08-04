@@ -32,7 +32,12 @@ const CompleteProfile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axiosInstance.put('/auth/complete-profile', form);
+      const response = await axiosInstance.put('/auth/complete-profile', form);
+      const newToken = response.data.token; // Get new token from response
+      if (newToken) {
+        sessionStorage.setItem('token', newToken); // Update token in sessionStorage
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`; // Update axios headers
+      }
       toast.success('Profile completed successfully!');
       navigate('/');
     } catch (err: any) {

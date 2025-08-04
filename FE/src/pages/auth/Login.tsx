@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState} from 'react';
 import axiosInstance from '../../api/axiosInstance';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 interface LoginForm {
@@ -10,21 +10,9 @@ interface LoginForm {
 
 const Login = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [form, setForm] = useState<LoginForm>({ email: '', password: '' });
 
-  useEffect(() => {
-    const query = new URLSearchParams(location.search);
-    const token = query.get('token');
-    const error = query.get('error');
-    if (token) {
-      sessionStorage.setItem('token', token);
-      toast.success('Login successful');
-      navigate('/');
-    } else if (error) {
-      toast.error('Google authentication failed');
-    }
-  }, [location, navigate]);
+ 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,6 +23,7 @@ const Login = () => {
     try {
       const res = await axiosInstance.post('/auth/login', form);
       sessionStorage.setItem('token', res.data.token);
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
       toast.success('Login successful');
       navigate('/');
     } catch (err: any) {
@@ -43,6 +32,7 @@ const Login = () => {
   };  
 
   const handleGoogleLogin = () => {
+    // console.log('Initiating Google login'); // Log for debugging
     window.location.href = 'http://localhost:5000/api/auth/google';
   };
 

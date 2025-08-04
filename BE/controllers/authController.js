@@ -4,41 +4,78 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cloudinary = require('../utils/cloudinary');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 // Configure Google OAuth Strategy
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    let user = await User.findOne({ googleId: profile.id });
-    if (!user) {
-      user = await User.findOne({ email: profile.emails[0].value });
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+    // console.log('Google OAuth Profile:', profile); // Log profile for debugging
+      let user = await User.findOne({ googleId: profile.id });
       if (!user) {
-        user = new User({
-          googleId: profile.id,
-          name: profile.displayName,
-          email: profile.emails[0].value,
-          profileImage: profile.photos[0].value || '',
-          isActive: true
-        });
+        user = await User.findOne({ email: profile.emails[0].value });
+        if (!user) {
+          user = new User({
+            googleId: profile.id,
+            name: profile.displayName,
+            email: profile.emails[0].value,
+            profileImage: profile.photos[0].value || '',
+            isActive: true
+          });
         await user.save();
+        // console.log('New user created:', user.email);
       } else {
         user.googleId = profile.id;
+        user.isActive = true;
         await user.save();
+        // console.log('Linked Google ID to existing user:', user.email);
       }
+    } else {
+      user.profileImage = profile.photos[0].value || user.profileImage;
+      user.isActive = true;
+      await user.save();
+      // console.log('Existing user logged in:', user.email);
     }
-    done(null, user);
+    return done(null, user);
   } catch (err) {
-    done(err, null);
+    console.error('Google OAuth Strategy Error:', err);
+    return done(err, null);
   }
 }));
+
+// Ensure serialize/deserialize are robust
+passport.serializeUser((user, done) => {
+  // console.log('Serializing user:', user._id); // Log for debugging
+  done(null, user._id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      console.error('Deserialize User: User not found for ID:', id);
+      return done(new Error('User not found'), null);
+    }
+    // console.log('Deserialized user:', user.email); // Log for debugging
+    done(null, user);
+  } catch (err) {
+    console.error('Deserialize User Error:', err);
+    done(err, null);
+  }
+});
 
 exports.googleAuthCallback = async (req, res) => {
   try {
     const user = req.user;
+    if (!user) {
+      console.error('Google Auth Callback: No user found in req.user');
+      throw new Error('User not found in session');
+    }
+
+    // console.log('Generating token for user:', user.email); // Log for debugging
     const token = jwt.sign(
       {
         userId: user._id,
@@ -53,15 +90,20 @@ exports.googleAuthCallback = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
+    const isProfileComplete = Boolean(user.address && user.course);
 
-    // Check if profile is complete
-    const isProfileComplete = user.address && user.course;
-    const redirectUrl = isProfileComplete
-      ? `http://localhost:5173/?token=${token}`
-      : `http://localhost:5173/complete-profile?token=${token}`;
+const redirectUrl = isProfileComplete
+  ? `http://localhost:5173/?token=${token}`
+  : `http://localhost:5173/complete-profile?token=${token}`;
 
+// console.log("Profile complete:", isProfileComplete);
+
+
+
+    // console.log('Redirecting to:', redirectUrl); // Log for debugging
     res.redirect(redirectUrl);
   } catch (err) {
+    console.error('Google Auth Callback Error:', err);
     res.redirect('http://localhost:5173/login?error=auth_failed');
   }
 };
