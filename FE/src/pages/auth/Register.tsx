@@ -65,6 +65,10 @@ const Register = () => {
     window.location.href = 'http://localhost:5000/api/auth/google';
   };
 
+  const handleGithubRegister = () => {
+    window.location.href = 'http://localhost:5000/api/auth/github';
+  };
+
   return (
     <div className='py-10 bg-gray-50'>
       <div className="min-h-screen flex items-center justify-center">
@@ -161,7 +165,9 @@ const Register = () => {
               <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" className="h-5 w-5" />
               <span className="text-sm font-medium">Google</span>
             </button>
-            <button className="w-1/2 bg-gray-100 py-2 rounded-md hover:bg-gray-200 flex items-center justify-center gap-2">
+            <button
+              onClick={handleGithubRegister}
+              className="w-1/2 bg-gray-100 py-2 rounded-md hover:bg-gray-200 flex items-center justify-center gap-2">
               <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="h-5 w-5" />
               <span className="text-sm font-medium">GitHub</span>
             </button>

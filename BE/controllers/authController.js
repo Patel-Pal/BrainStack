@@ -4,16 +4,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cloudinary = require('../utils/cloudinary');
 const passport = require('passport');
-
+const GitHubStrategy = require('passport-github2').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
 // Configure Google OAuth Strategy
-  passport.use(new GoogleStrategy({
+passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL
   }, async (accessToken, refreshToken, profile, done) => {
     try {
-    // console.log('Google OAuth Profile:', profile); // Log profile for debugging
+      // console.log('Profile:', profile);
       let user = await User.findOne({ googleId: profile.id });
       if (!user) {
         user = await User.findOne({ email: profile.emails[0].value });
@@ -42,6 +43,42 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
     return done(null, user);
   } catch (err) {
     console.error('Google OAuth Strategy Error:', err);
+    return done(err, null);
+  }
+}));
+
+// Configure GitHub OAuth Strategy
+passport.use(new GitHubStrategy({
+  clientID: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackURL: process.env.GITHUB_CALLBACK_URL
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    let user = await User.findOne({ githubId: profile.id });
+    if (!user) {
+      user = await User.findOne({ email: profile.emails && profile.emails[0] ? profile.emails[0].value : '' });
+      if (!user) {
+        user = new User({
+          githubId: profile.id,
+          name: profile.displayName || profile.username,
+          email: profile.emails && profile.emails[0] ? profile.emails[0].value : `${profile.username}@github.com`,
+          profileImage: profile.photos && profile.photos[0] ? profile.photos[0].value : '',
+          isActive: true
+        });
+        await user.save();
+      } else {
+        user.githubId = profile.id;
+        user.isActive = true;
+        await user.save();
+      }
+    } else {
+      user.profileImage = profile.photos && profile.photos[0] ? profile.photos[0].value : user.profileImage;
+      user.isActive = true;
+      await user.save();
+    }
+    return done(null, user);
+  } catch (err) {
+    console.error('GitHub OAuth Strategy Error:', err);
     return done(err, null);
   }
 }));
@@ -108,6 +145,41 @@ const redirectUrl = isProfileComplete
   }
 };
 
+exports.githubAuthCallback = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      console.error('GitHub Auth Callback: No user found in req.user');
+      throw new Error('User not found in session');
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        name: user.name,
+        address: user.address,
+        email: user.email,
+        role: user.role,
+        course: user.course,
+        isActive: user.isActive,
+        profileImage: user.profileImage,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+    const isProfileComplete = Boolean(user.address && user.course);
+
+    const redirectUrl = isProfileComplete
+      ? `http://localhost:5173/?token=${token}`
+      : `http://localhost:5173/complete-profile?token=${token}`;
+
+    res.redirect(redirectUrl);
+  } catch (err) {
+    console.error('GitHub Auth Callback Error:', err);
+    res.redirect('http://localhost:5173/login?error=auth_failed');
+  }
+};
+
 exports.completeProfile = async (req, res) => {
   try {
     const { address, course } = req.body;
@@ -164,6 +236,10 @@ exports.completeProfile = async (req, res) => {
 
 exports.googleAuth = passport.authenticate('google', {
   scope: ['profile', 'email']
+});
+
+exports.githubAuth = passport.authenticate('github', {
+  scope: ['user:email']
 });
 
 

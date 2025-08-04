@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'professor', 'admin'], default: 'student' },
   isActive: { type: Boolean, default: true },
   profileImage: { type: String, default: '' },
-  googleId: { type: String, unique: true, sparse: true }
+  googleId: { type: String, unique: true, sparse: true },
+  githubId: { type: String, unique: true, sparse: true }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);

@@ -14,8 +14,13 @@ router.post('/login',validateRequest,authController.login);
 // Update profile
 router.put('/update-profile', authMiddleware, upload.single('profileImage'), validateRequest, authController.updateProfile);
 
+// Google OAuth
 router.get('/google', authController.googleAuth);
 router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), authController.googleAuthCallback);
+
+// GitHub OAuth
+router.get('/github', authController.githubAuth);
+router.get('/github/callback', passport.authenticate('github', { failureRedirect: '/login' }), authController.githubAuthCallback);
 
 router.put('/complete-profile', authMiddleware, validateRequest, authController.completeProfile);
 module.exports = router;

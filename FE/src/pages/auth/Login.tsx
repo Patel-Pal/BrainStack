@@ -36,6 +36,10 @@ const Login = () => {
     window.location.href = 'http://localhost:5000/api/auth/google';
   };
 
+  const handleGithubLogin = () => {
+    window.location.href = 'http://localhost:5000/api/auth/github';
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md p-8 bg-white rounded-xl shadow">
@@ -74,7 +78,9 @@ const Login = () => {
             <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" className="h-5 w-5" />
             <span className="text-sm font-medium">Google</span>
           </button>
-          <button className="w-1/2 bg-gray-100 py-2 rounded-md hover:bg-gray-200 flex items-center justify-center gap-2">
+          <button 
+            onClick={handleGithubLogin} 
+            className="w-1/2 bg-gray-100 py-2 rounded-md hover:bg-gray-200 flex items-center justify-center gap-2">
             <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="h-5 w-5" />
             <span className="text-sm font-medium">GitHub</span>
           </button>
