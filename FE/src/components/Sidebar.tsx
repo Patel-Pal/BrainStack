@@ -7,22 +7,59 @@ import {
   FaCog,
   FaTimes,
   FaSignOutAlt,
+  FaUserPlus,
 } from 'react-icons/fa';
+import { jwtDecode } from 'jwt-decode';
 
 interface SidebarProps {
   closeSidebar?: () => void;
+}
+interface DecodedToken {
+  role?: string;
 }
 
 const Sidebar = ({ closeSidebar }: SidebarProps) => {
   const navigate = useNavigate();
 
-  const navItems = [
-    { path: '/', label: 'Overview', icon: <FaBookOpen /> },
-    { path: '/', label: 'Content', icon: <FaFileAlt /> },
-    { path: '/', label: 'Assignments', icon: <FaTasks /> },
-    { path: '/', label: 'Grades', icon: <FaChartBar /> },
-    { path: '/profile-settings', label: 'Profile Settings', icon: <FaCog /> },
-  ];
+  const token = sessionStorage.getItem('token');
+  let userRole: string | null = null;
+  if (token) {
+    try {
+      const decoded: DecodedToken = jwtDecode(token);
+      userRole = decoded.role || null;
+      // console.log('User role:', userRole);
+    } catch (error) {
+      console.error('Invalid token');
+    }
+  }
+
+  let navItems: { path: string; label: string; icon: React.ReactNode }[] = [];
+
+  if (userRole === 'admin') {
+    navItems = [
+      { path: '/', label: 'Admin Dashboard', icon: <FaChartBar /> },
+      { path: '/manage-users', label: 'Manage Users', icon: <FaTasks /> },
+      { path: '/Add-professors', label: 'Add Profesor', icon: <FaUserPlus /> },
+      { path: '/manage-courses', label: 'Manage Courses', icon: <FaBookOpen /> },
+      { path: '/profile-settings', label: 'Profile Settings', icon: <FaCog /> },
+    ];
+  } else if (userRole === 'student') {
+    navItems = [
+      { path: '/', label: 'Student Dashboard', icon: <FaChartBar /> },
+      { path: '/my-courses', label: 'My Courses', icon: <FaBookOpen /> },
+      { path: '/assignments', label: 'Assignments', icon: <FaFileAlt /> },
+      { path: '/grades', label: 'Grades', icon: <FaTasks /> },
+      { path: '/profile-settings', label: 'Profile Settings', icon: <FaCog /> },
+    ];
+  } else if (userRole === 'professor') {
+    navItems = [
+      { path: '/', label: 'Professor Dashboard', icon: <FaChartBar /> },
+      { path: '/upload-content', label: 'Upload Content', icon: <FaFileAlt /> },
+      { path: '/student-submissions', label: 'Student Submissions', icon: <FaTasks /> },
+      { path: '/profile-settings', label: 'Profile Settings', icon: <FaCog /> },
+    ];
+  }
+
 
   const handleLogout = () => {
     sessionStorage.clear(); // ✅ Clear session
@@ -49,10 +86,9 @@ const Sidebar = ({ closeSidebar }: SidebarProps) => {
               to={item.path}
               onClick={closeSidebar}
               className={({ isActive }) =>
-                `flex items-center gap-3 p-3 rounded-lg transition-all duration-200 text-lg ${
-                  isActive
-                    ? 'bg-indigo-100 text-indigo-700 font-semibold'
-                    : 'hover:bg-gray-100 text-gray-700'
+                `flex items-center gap-3 p-3 rounded-lg transition-all duration-200 text-lg ${isActive
+                  ? 'bg-indigo-100 text-indigo-700 font-semibold'
+                  : 'hover:bg-gray-100 text-gray-700'
                 }`
               }
             >

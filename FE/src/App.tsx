@@ -69,6 +69,7 @@ const App = () => {
       navigate('/login', { replace: true });
     }
   }, [location, navigate, isProcessingToken]);
+  
   return (
     <>
       <AppRoutes />

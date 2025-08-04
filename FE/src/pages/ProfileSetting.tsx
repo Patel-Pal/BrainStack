@@ -22,10 +22,14 @@ const ProfileSettings = () => {
   const [email, setEmail] = useState('');
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [currentProfileImage, setCurrentProfileImage] = useState<string>('');
+  const [role, setRole] = useState(false);
+  // const token = sessionStorage.getItem('token');
+
 
   // Fetch user data on mount
   useEffect(() => {
     const token = sessionStorage.getItem("token");
+    let userRole: string | null = null;
 
     if (token) {
       try {
@@ -35,13 +39,18 @@ const ProfileSettings = () => {
         setCourse(decoded.course || '');
         setEmail(decoded.email || '');
         setCurrentProfileImage(decoded.profileImage || '');
+        userRole = decoded.role || null;
+        if (userRole === 'admin') {
+          setRole(true);
+        }
       } catch (err) {
         toast.error("Invalid token");
       }
     }
   }, []);
 
- 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -84,8 +93,8 @@ const ProfileSettings = () => {
   return (
     <div className="flex bg-gray-100 min-h-screen">
       <div className="flex-1 flex flex-col">
-        <main className="p-10">
-          <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
+        <main className="py-5 px-12">
+          <h2 className="text-3xl font-bold mb-8 text-black">Profile Settings</h2>
           <form className="max-w-xl space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block font-medium mb-1">Name</label>
@@ -114,16 +123,19 @@ const ProfileSettings = () => {
                 className="w-full p-2 border rounded-md"
               />
             </div>
-            <div>
-              <label className="block font-medium mb-1">Course</label>
-              <input
-                type="text"
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            {/* <select
+
+            {!role && (
+              <>
+                <div>
+                  <label className="block font-medium mb-1">Course</label>
+                  <input
+                    type="text"
+                    value={course}
+                    onChange={(e) => setCourse(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+                {/* <select
                 value={course}
                 onChange={(e) => setCourse(e.target.value)}
                 className="w-full p-2 border rounded-md"
@@ -135,6 +147,10 @@ const ProfileSettings = () => {
                   </option>
                 ))}
               </select> */}
+              </>
+
+            )}
+
             <div>
               <label className="block font-medium mb-1">Profile Picture</label>
               {currentProfileImage && (
