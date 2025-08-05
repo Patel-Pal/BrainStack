@@ -1,4 +1,4 @@
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
@@ -15,6 +15,12 @@ interface DecodedToken {
   exp: number;
 }
 
+interface Course {
+  _id: string;
+  name: string;
+  isActive: boolean;
+}
+
 const ProfileSettings = () => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
@@ -23,31 +29,49 @@ const ProfileSettings = () => {
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [currentProfileImage, setCurrentProfileImage] = useState<string>('');
   const [role, setRole] = useState(false);
+  const [isprof, setIsprof] = useState(false)
   // const token = sessionStorage.getItem('token');
 
+  // course
+  const [courses, setCourses] = useState<Course[]>([]);
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await axiosInstance.get('/courses');
+        const activeCourses = (response.data.data || []).filter((course: Course) => course.isActive);
+        setCourses(activeCourses);
+      } catch (err) {
+        toast.error('Failed to fetch courses');
+      }
+    };
+    fetchCourses();
+  }, []);
 
-  // Fetch user data on mount
+  let userRole: string | null = null;
   useEffect(() => {
     const token = sessionStorage.getItem("token");
-    let userRole: string | null = null;
 
-    if (token) {
-      try {
-        const decoded = jwtDecode<DecodedToken>(token);
-        setName(decoded.name || '');
-        setAddress(decoded.address || ''); // Populate address from token
-        setCourse(decoded.course || '');
-        setEmail(decoded.email || '');
-        setCurrentProfileImage(decoded.profileImage || '');
-        userRole = decoded.role || null;
-        if (userRole === 'admin') {
-          setRole(true);
+      if (token) {
+        try {
+          const decoded = jwtDecode<DecodedToken>(token);
+          setName(decoded.name || '');
+          setAddress(decoded.address || ''); // Populate address from token
+          setCourse(decoded.course || '');
+          setEmail(decoded.email || '');
+          setCurrentProfileImage(decoded.profileImage || '');
+          userRole = decoded.role || null;
+          if(userRole === 'admin'){
+            setRole(true)
+          }
+          if(userRole === 'professor'){
+            setIsprof(true)
+          }
+          // console.log(userRole)
+        } catch (err) {
+          toast.error("Invalid token");
         }
-      } catch (err) {
-        toast.error("Invalid token");
       }
-    }
-  }, []);
+    }, []);
 
 
 
@@ -124,32 +148,34 @@ const ProfileSettings = () => {
               />
             </div>
 
-            {!role && (
+            {!role && !isprof && (
               <>
-                <div>
-                  <label className="block font-medium mb-1">Course</label>
-                  <input
-                    type="text"
-                    value={course}
-                    onChange={(e) => setCourse(e.target.value)}
-                    className="w-full p-2 border rounded-md"
-                  />
+              <div>
+              <label className="block font-medium ">Course</label>
+                <select
+                  value={course}
+                  onChange={(e) => setCourse(e.target.value)}
+                  className="w-full p-2 border rounded-md"
+                >
+                  {courses.length > 0 ? (
+                    courses.map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>
+                      No active courses available
+                    </option>
+                  )}
+                </select>
                 </div>
-                {/* <select
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="" disabled>Select a course</option>
-                {courses.map((courseOption) => (
-                  <option key={courseOption} value={courseOption}>
-                    {courseOption}
-                  </option>
-                ))}
-              </select> */}
               </>
 
             )}
+
+            
+            
 
             <div>
               <label className="block font-medium mb-1">Profile Picture</label>

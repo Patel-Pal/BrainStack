@@ -5,6 +5,7 @@ import ProfileSettings from '../pages/ProfileSetting';
 import Layout from '../components/Layout';
 import CompleteProfile from '../pages/CompleteProfile';
 import ManageCourses from '../pages/admin/ManageCourses';
+import AddProfessorForm from '../pages/admin/AddProfessorForm';
 
 
 // Inline protected route component
@@ -28,8 +29,9 @@ const AppRoutes = () => {
           <Route path="/profile-settings" element={<ProfileSettings />} />
           
 
-          <Route path="//manage-courses" element={<ManageCourses />} />
-          {/* Add more protected routes here */}
+          <Route path='/Add-professors' element={<AddProfessorForm/>} />
+          <Route path="/manage-courses" element={<ManageCourses />} />
+          
         </Route>
       </Route>
     </Routes>

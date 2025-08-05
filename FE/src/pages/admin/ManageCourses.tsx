@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from "../../api/axiosInstance";
+import { Switch } from '@headlessui/react';
 
 const ManageCourses = () => {
   const [form, setForm] = useState({
@@ -44,6 +45,21 @@ const ManageCourses = () => {
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add course');
+    }
+  };
+
+  const handleToggleStatus = async (courseId: string) => {
+    try {
+      const response = await axiosInstance.patch(`/courses/${courseId}/toggle-status`, {}, {
+        withCredentials: true
+      });
+
+      if (response.data.success) {
+        setSuccess(response.data.message);
+        fetchCourses();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to toggle course status');
     }
   };
 
@@ -108,6 +124,7 @@ const ManageCourses = () => {
                     <th className="px-4 py-3">Description</th>
                     <th className="px-4 py-3">Professor ID</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Action</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm text-gray-800 bg-white">
@@ -116,10 +133,31 @@ const ManageCourses = () => {
                       <td className="px-4 py-3">{course.name}</td>
                       <td className="px-4 py-3">{course.description}</td>
                       <td className="px-4 py-3">{course.professor || 'None'}</td>
-                      <td className="px-4 py-3">{course.isActive ? 'Active' : 'Inactive'}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${course.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}
+                        >
+                          {course.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Switch
+                          checked={course.isActive}
+                          onChange={() => handleToggleStatus(course._id)}
+                          className={`${course.isActive ? 'bg-green-500' : 'bg-gray-300'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none`}
+                        >
+                          <span
+                            className={`${course.isActive ? 'translate-x-6' : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                          />
+                        </Switch>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             ) : (
               <div className="text-gray-600 text-center p-4 border border-gray-200 rounded-md bg-white">

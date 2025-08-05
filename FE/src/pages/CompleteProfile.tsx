@@ -8,10 +8,30 @@ interface ProfileForm {
   course: string;
 }
 
+interface Course {
+  _id: string;
+  name: string;
+  isActive: boolean;
+}
 const CompleteProfile = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState<ProfileForm>({ address: '', course: '' });
+
+  const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await axiosInstance.get('/courses');
+        const activeCourses = (response.data.data || []).filter((course: Course) => course.isActive);
+        setCourses(activeCourses);
+      } catch (err) {
+        toast.error('Failed to fetch courses');
+      }
+    };
+    fetchCourses();
+  }, []);
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -23,6 +43,7 @@ const CompleteProfile = () => {
       navigate('/login');
     }
   }, [location, navigate]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -58,6 +79,7 @@ const CompleteProfile = () => {
             className="border border-gray-300 p-3 rounded-md"
             required
           />
+
           <select
             name="course"
             value={form.course}
@@ -66,11 +88,19 @@ const CompleteProfile = () => {
             required
           >
             <option value="">Select Course</option>
-            <option value="BCA">BCA</option>
-            <option value="MCA">MCA</option>
-            <option value="BSc IT">BSc IT</option>
-            <option value="MSc CS">MSc CS</option>
+            {courses.length > 0 ? (
+              courses.map((course) => (
+                <option key={course._id} value={course._id}>
+                  {course.name}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>
+                No active courses available
+              </option>
+            )}
           </select>
+
           <button
             type="submit"
             className="bg-blue-600 text-white py-3 rounded-md font-semibold hover:bg-blue-700 transition"

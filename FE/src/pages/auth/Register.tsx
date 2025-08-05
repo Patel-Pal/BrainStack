@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { MdCloudUpload } from 'react-icons/md';
@@ -13,6 +13,12 @@ interface RegisterForm {
   profileImage?: File | null;
 }
 
+interface Course {
+  _id: string;
+  name: string;
+  isActive: boolean;
+}
+
 const Register = () => {
   const navigate = useNavigate();
   const [preview, setPreview] = useState<string | null>(null);
@@ -24,6 +30,21 @@ const Register = () => {
     course: '',
     profileImage: null,
   });
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await axiosInstance.get('/courses');
+        const activeCourses = (response.data.data || []).filter((course: Course) => course.isActive);
+        setCourses(activeCourses);
+      } catch (err) {
+        setError('Failed to fetch courses');
+      }
+    };
+    fetchCourses();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -74,6 +95,7 @@ const Register = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-full max-w-md p-8 bg-white rounded-xl shadow">
           <h2 className="text-2xl font-bold text-center mb-6">Create your EduHub account</h2>
+          {error && <div className="mb-4 text-red-500">{error}</div>}
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <input
               name="name"
@@ -105,17 +127,25 @@ const Register = () => {
               onChange={handleChange}
               className="border border-gray-300 p-2 rounded-md"
             />
-            <select
+             <select
               name="course"
               value={form.course}
               onChange={handleChange}
               className="border border-gray-300 p-2 rounded-md"
+              required
             >
               <option value="">Select Course</option>
-              <option value="BCA">BCA</option>
-              <option value="MCA">MCA</option>
-              <option value="BSc IT">BSc IT</option>
-              <option value="MSc CS">MSc CS</option>
+              {courses.length > 0 ? (
+                courses.map((course) => (
+                  <option key={course._id} value={course._id}>
+                    {course.name}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>
+                  No active courses available
+                </option>
+              )}
             </select>
 
             <div className="flex items-center gap-4">

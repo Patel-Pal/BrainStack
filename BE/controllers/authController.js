@@ -242,7 +242,7 @@ exports.githubAuth = passport.authenticate('github', {
   scope: ['user:email']
 });
 
-
+// student register
 exports.register = async (req, res) => {
   try {
     const { name, address, email, password, course } = req.body;
@@ -287,6 +287,93 @@ exports.register = async (req, res) => {
   }
 };
 
+//register professor
+exports.registerProfessor = async (req, res) => {
+  try {
+    const { name, email, password, course } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: 'Email already registered' });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newProfessor = new User({
+      name,
+      email,
+      password: hashedPassword,
+      course,
+      role: 'professor',
+      isActive: true,
+      profileImage: ''
+    });
+
+    await newProfessor.save();
+
+    res.status(201).json({ message: 'Professor registered successfully' });
+  } catch (err) {
+    console.error('REGISTER PROFESSOR ERROR:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// get prof info
+exports.getProfessors = async (req, res) => {
+  try {
+    // Check if user is admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied: Admin only' });
+    }
+
+    const professors = await User.find({ role: 'professor' }).select('name email course isActive');
+    res.status(200).json({
+      message: 'Professors retrieved successfully',
+      professors
+    });
+  } catch (err) {
+    console.error('GET PROFESSORS ERROR:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+//active disactive professor
+exports.toggleProfessorStatus = async (req, res) => {
+  try {
+    // Check if user is admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied: Admin only' });
+    }
+
+    const { professorId } = req.params;
+    const professor = await User.findById(professorId);
+
+    if (!professor || professor.role !== 'professor') {
+      return res.status(404).json({ message: 'Professor not found' });
+    }
+
+    professor.isActive = !professor.isActive;
+    await professor.save();
+
+    res.status(200).json({
+      message: `Professor status ${professor.isActive ? 'activated' : 'deactivated'} successfully`,
+      professor: {
+        id: professor._id,
+        name: professor.name,
+        email: professor.email,
+        course: professor.course,
+        isActive: professor.isActive
+      }
+    });
+  } catch (err) {
+    console.error('TOGGLE PROFESSOR STATUS ERROR:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+//login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -335,7 +422,7 @@ exports.login = async (req, res) => {
   }
 };
 
-
+//update profile
 exports.updateProfile = async (req, res) => {
   try {
     const { name, address, password, course } = req.body;

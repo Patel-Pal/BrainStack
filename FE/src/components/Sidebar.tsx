@@ -39,7 +39,7 @@ const Sidebar = ({ closeSidebar }: SidebarProps) => {
     navItems = [
       { path: '/', label: 'Admin Dashboard', icon: <FaChartBar /> },
       { path: '/manage-users', label: 'Manage Users', icon: <FaTasks /> },
-      { path: '/Add-professors', label: 'Add Profesor', icon: <FaUserPlus /> },
+      { path: '/Add-professors', label: 'Add Professor', icon: <FaUserPlus /> },
       { path: '/manage-courses', label: 'Manage Courses', icon: <FaBookOpen /> },
       { path: '/profile-settings', label: 'Profile Settings', icon: <FaCog /> },
     ];

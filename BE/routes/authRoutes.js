@@ -9,8 +9,19 @@ const passport = require('passport');
 
 //regster
 router.post('/register',upload.single('profileImage'), validateRequest,authController.register);
+
+// Register professor
+router.post('/register-professor', validateRequest, authController.registerProfessor);
+
+// Get all professors
+router.get('/professors', authMiddleware, authController.getProfessors);
+
+// Toggle professor active status
+router.put('/professors/:professorId/toggle-status', authMiddleware, authController.toggleProfessorStatus);
+
 // Login
 router.post('/login',validateRequest,authController.login);
+
 // Update profile
 router.put('/update-profile', authMiddleware, upload.single('profileImage'), validateRequest, authController.updateProfile);
 
