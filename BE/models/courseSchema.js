@@ -13,11 +13,10 @@ const courseSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Course description cannot exceed 500 characters']
   },
-  professor: {
+  professors: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    default: null
-  },
+  }],
   isActive: {
     type: Boolean,
     default: true
@@ -26,6 +25,12 @@ const courseSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+});
+courseSchema.pre('save', function (next) {
+  if (this.professors === null || this.professors === undefined) {
+    this.professors = [];
+  }
+  next();
 });
 
 module.exports = mongoose.model('Course', courseSchema);

@@ -1,5 +1,7 @@
 const streamifier = require('streamifier');
 const User = require('../models/userModel');
+const Course = require('../models/courseSchema');
+const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cloudinary = require('../utils/cloudinary');
@@ -9,23 +11,23 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 // Configure Google OAuth Strategy
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL
-  }, async (accessToken, refreshToken, profile, done) => {
-    try {
-      // console.log('Profile:', profile);
-      let user = await User.findOne({ googleId: profile.id });
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    // console.log('Profile:', profile);
+    let user = await User.findOne({ googleId: profile.id });
+    if (!user) {
+      user = await User.findOne({ email: profile.emails[0].value });
       if (!user) {
-        user = await User.findOne({ email: profile.emails[0].value });
-        if (!user) {
-          user = new User({
-            googleId: profile.id,
-            name: profile.displayName,
-            email: profile.emails[0].value,
-            profileImage: profile.photos[0].value || '',
-            isActive: true
-          });
+        user = new User({
+          googleId: profile.id,
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          profileImage: profile.photos[0].value || '',
+          isActive: true
+        });
         await user.save();
         // console.log('New user created:', user.email);
       } else {
@@ -105,44 +107,44 @@ passport.deserializeUser(async (id, done) => {
 });
 
 exports.googleAuthCallback = async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user) {
-      console.error('Google Auth Callback: No user found in req.user');
-      throw new Error('User not found in session');
+    try {
+      const user = req.user;
+      if (!user) {
+        console.error('Google Auth Callback: No user found in req.user');
+        throw new Error('User not found in session');
+      }
+
+      // console.log('Generating token for user:', user.email); // Log for debugging
+      const token = jwt.sign(
+        {
+          userId: user._id,
+          name: user.name,
+          address: user.address,
+          email: user.email,
+          role: user.role,
+          course: user.course,
+          isActive: user.isActive,
+          profileImage: user.profileImage,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+      const isProfileComplete = Boolean(user.address && user.course);
+
+      const redirectUrl = isProfileComplete
+        ? `http://localhost:5173/?token=${token}`
+        : `http://localhost:5173/complete-profile?token=${token}`;
+
+      // console.log("Profile complete:", isProfileComplete);
+
+
+
+      // console.log('Redirecting to:', redirectUrl); // Log for debugging
+      res.redirect(redirectUrl);
+    } catch (err) {
+      console.error('Google Auth Callback Error:', err);
+      res.redirect('http://localhost:5173/login?error=auth_failed');
     }
-
-    // console.log('Generating token for user:', user.email); // Log for debugging
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        name: user.name,
-        address: user.address,
-        email: user.email,
-        role: user.role,
-        course: user.course,
-        isActive: user.isActive,
-        profileImage: user.profileImage,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-    const isProfileComplete = Boolean(user.address && user.course);
-
-const redirectUrl = isProfileComplete
-  ? `http://localhost:5173/?token=${token}`
-  : `http://localhost:5173/complete-profile?token=${token}`;
-
-// console.log("Profile complete:", isProfileComplete);
-
-
-
-    // console.log('Redirecting to:', redirectUrl); // Log for debugging
-    res.redirect(redirectUrl);
-  } catch (err) {
-    console.error('Google Auth Callback Error:', err);
-    res.redirect('http://localhost:5173/login?error=auth_failed');
-  }
 };
 
 exports.githubAuthCallback = async (req, res) => {
@@ -292,29 +294,73 @@ exports.registerProfessor = async (req, res) => {
   try {
     const { name, email, password, course } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ message: 'Email already registered' });
+    // Validate required fields
+    if (!name || !email || !password || !course) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
 
+    // Validate course ID
+    if (!mongoose.Types.ObjectId.isValid(course)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid course ID'
+      });
+    }
+
+    // Check if course exists
+    const courseExists = await Course.findById(course);
+    if (!courseExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Check if email exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newProfessor = new User({
+    // Create new professor
+    const professor = new User({
       name,
       email,
       password: hashedPassword,
-      course,
       role: 'professor',
-      isActive: true,
-      profileImage: ''
+      course
     });
 
-    await newProfessor.save();
+    // Save professor
+    const savedProfessor = await professor.save();
 
-    res.status(201).json({ message: 'Professor registered successfully' });
-  } catch (err) {
-    console.error('REGISTER PROFESSOR ERROR:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    // Add professor to course's professors array
+    await Course.findByIdAndUpdate(
+      course,
+      { $addToSet: { professors: savedProfessor._id } },
+      { new: true }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Professor registered successfully',
+      data: savedProfessor
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
   }
 };
 

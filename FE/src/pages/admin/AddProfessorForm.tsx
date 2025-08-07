@@ -1,8 +1,8 @@
-// AddProfessorForm.tsx
 import { useState, useEffect } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { toast } from "react-toastify";
 import { Switch } from '@headlessui/react';
+
 interface Course {
     _id: string;
     name: string;
@@ -68,8 +68,10 @@ const AddProfessorForm = () => {
             setMessage(res.data.message);
             setFormData({ name: "", email: "", password: "", course: "" });
             fetchProfessors();
+            toast.success("Professor added successfully");
         } catch (err: any) {
             setMessage(err.response?.data?.message || "Something went wrong");
+            toast.error(err.response?.data?.message || "Something went wrong");
         } finally {
             setLoading(false);
         }
@@ -168,7 +170,6 @@ const AddProfessorForm = () => {
                     {message && <p className="text-center text-sm text-red-500 mt-4">{message}</p>}
                 </form>
 
-                {/* Professors Table */}
                 <div className="bg-white shadow rounded-lg p-6">
                     <h2 className="text-xl font-semibold mb-4 text-gray-800">Existing Professors</h2>
                     <div className="overflow-x-auto">
@@ -191,26 +192,16 @@ const AddProfessorForm = () => {
                                             <td className="py-2 px-4">{getCourseName(prof.course)}</td>
                                             <td className="py-2 px-4">
                                                 <span
-                                                    className={`px-3 py-1 rounded-full text-sm font-medium ${prof.isActive
+                                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                        prof.isActive
                                                             ? "bg-green-100 text-green-700"
                                                             : "bg-red-100 text-red-700"
-                                                        }`}
+                                                    }`}
                                                 >
                                                     {prof.isActive ? "Active" : "Inactive"}
                                                 </span>
                                             </td>
                                             <td className="py-2 px-4">
-                                                {/* <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={prof.isActive}
-                                                        onChange={() => toggleStatus(prof._id)}
-                                                    />
-                                                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:bg-green-500 transition duration-300 ease-in-out relative">
-                                                        <span className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5" />
-                                                    </div>
-                                                </label> */}
                                                 <Switch
                                                     checked={prof.isActive}
                                                     onChange={() => toggleStatus(prof._id)}

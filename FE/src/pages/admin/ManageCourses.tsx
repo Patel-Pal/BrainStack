@@ -19,6 +19,7 @@ const ManageCourses = () => {
     try {
       const response = await axiosInstance.get('/courses');
       setCourses(response.data.data || []);
+      console.log(response.data.data)
     } catch (err) {
       setError('Failed to fetch courses');
     }
@@ -132,7 +133,18 @@ const ManageCourses = () => {
                     <tr key={index} className="border-t border-gray-200">
                       <td className="px-4 py-3">{course.name}</td>
                       <td className="px-4 py-3">{course.description}</td>
-                      <td className="px-4 py-3">{course.professor || 'None'}</td>
+
+                      <td className="px-4 py-3">
+                        <div className="max-h-[60px] overflow-y-auto">
+                          {course.professors && course.professors.length > 0
+                            ? course.professors.map((prof: any, i: number) => (
+                              <div key={i}>{prof.name}</div>
+                            ))
+                            : 'None'}
+                        </div>
+                      </td>
+
+
                       <td className="px-4 py-3">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${course.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'

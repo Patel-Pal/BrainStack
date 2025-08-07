@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import CompleteProfile from '../pages/CompleteProfile';
 import ManageCourses from '../pages/admin/ManageCourses';
 import AddProfessorForm from '../pages/admin/AddProfessorForm';
+import UploadContent from '../pages/professor/UploadContent';
 
 
 // Inline protected route component
@@ -28,10 +29,11 @@ const AppRoutes = () => {
           <Route path="/" element={<div className="text-center mt-10">Welcome to Learning Platform</div>} />
           <Route path="/profile-settings" element={<ProfileSettings />} />
           
-
           <Route path='/Add-professors' element={<AddProfessorForm/>} />
           <Route path="/manage-courses" element={<ManageCourses />} />
           
+          {/* Professor Routes */}
+          <Route path='/upload-content' element={<UploadContent />}/>
         </Route>
       </Route>
     </Routes>

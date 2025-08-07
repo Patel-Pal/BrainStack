@@ -55,7 +55,7 @@ const Sidebar = ({ closeSidebar }: SidebarProps) => {
     navItems = [
       { path: '/', label: 'Professor Dashboard', icon: <FaChartBar /> },
       { path: '/upload-content', label: 'Upload Content', icon: <FaFileAlt /> },
-      { path: '/student-submissions', label: 'Student Submissions', icon: <FaTasks /> },
+      // { path: '/student-submissions', label: 'Student Submissions', icon: <FaTasks /> },
       { path: '/profile-settings', label: 'Profile Settings', icon: <FaCog /> },
     ];
   }

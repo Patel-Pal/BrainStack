@@ -42,6 +42,8 @@ passport.deserializeUser(async (id, done) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 // course routes
 app.use('/api/courses', require('./routes/courseRoutes'));
+//professor routes
+app.use('/api/professor', require('./routes/professorRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
